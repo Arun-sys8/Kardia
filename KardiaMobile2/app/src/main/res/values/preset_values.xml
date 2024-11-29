@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Voreingestellter Wert für die SeekBar -->
+    <integer name="preset_seekbar_value">50</integer>
+
+</resources>

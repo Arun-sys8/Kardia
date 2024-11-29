@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">KardiaMobile</string>
+    <string name="Bt">Bluetooth</string>
+    <string name="bnt1">Light</string>
+    <string name="btn2">Medium</string>
+    <string name="btn3">Strong</string>
+</resources>
