@@ -5,91 +5,96 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
 
-    // BluetoothAdapter ist die zentrale API zur Steuerung der Bluetooth-Funktionen.
     private BluetoothAdapter bluetoothAdapter;
+    private ArrayList<String> deviceList; // Liste für gefundene Geräte
+    private ArrayAdapter<String> arrayAdapter; // Adapter für die Liste
+    private AlertDialog scanDialog; // Dialog-Fenster für den Scan
 
     @SuppressLint("MissingSuperCall")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Aktiviert ein modernes Edge-to-Edge-Layout-Design.
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // Passt die Ansicht an die Systemleisten (z. B. Status- und Navigationsleiste) an.
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // Initialisiert den Bluetooth-Adapter.
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        // Überprüft, ob Bluetooth auf dem Gerät unterstützt wird.
         if (bluetoothAdapter == null) {
             Toast.makeText(this, "Bluetooth wird nicht unterstützt", Toast.LENGTH_LONG).show();
         }
     }
 
-    // BroadcastReceiver verarbeitet Bluetooth-Ereignisse.
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @SuppressLint("MissingPermission")
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
 
             if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
-                System.out.println("Scann wurde gestartet");
+                System.out.println("Scan wurde gestartet");
+                deviceList.clear(); // Liste leeren
+                arrayAdapter.notifyDataSetChanged();
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
-                System.out.println("Scann wurde beendet");
+                System.out.println("Scan wurde beendet");
+                Toast.makeText(MainActivity.this, "Scan abgeschlossen", Toast.LENGTH_SHORT).show();
             } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                // Gerätedetails extrahieren, wenn ein Gerät gefunden wird.
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                if (device != null) {
-                    System.out.println("Gefundenes Gerät: " + device.getName() + " - " + device.getAddress());
-                } else {
-                    System.out.println("Unbekanntes Gerät gefunden");
+                if (device != null && device.getName() != null) {
+                    String deviceName = device.getName();
+                    System.out.println("Gefundenes Gerät: " + deviceName);
+                    if (!deviceList.contains(deviceName)) {
+                        deviceList.add(deviceName); // Gerät zur Liste hinzufügen
+                        arrayAdapter.notifyDataSetChanged(); // Adapter aktualisieren
+                    }
                 }
             }
         }
     };
 
-    // Startet die Bluetooth-Gerätesuche.
     public void startBluetoothScan(View view) {
-        // Prüft, ob Bluetooth unterstützt wird.
-        if (bluetoothAdapter == null) {
-            System.out.println("Bluetooth wird nicht unterstützt");
-            return;
-        }
-
-        // Falls Bluetooth deaktiviert ist, fordert die Aktivität den Benutzer auf, es zu aktivieren.
+        // Überprüfen, ob Bluetooth aktiviert ist
         if (!bluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, 2000);
+            promptEnableBluetooth();
             return;
         }
 
-        // Fordert Berechtigungen basierend auf der Android-Version an.
+        // Überprüfen, ob der Standort aktiviert ist
+        if (!isLocationEnabled()) {
+            promptEnableLocation();
+            return;
+        }
+
+        // Berechtigungen überprüfen
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             requestPermissions(new String[]{
                     android.Manifest.permission.BLUETOOTH_SCAN,
@@ -104,14 +109,15 @@ public class MainActivity extends AppCompatActivity {
             }, 1000);
         }
 
-        // Registriert den BroadcastReceiver, um Bluetooth-Ereignisse zu empfangen.
+        // Popup-Dialog für den Scan anzeigen
+        showScanDialog();
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothDevice.ACTION_FOUND);
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
         registerReceiver(mReceiver, filter);
 
-        // Startet die Suche nach Bluetooth-Geräten, wenn die Berechtigungen erteilt wurden.
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
             bluetoothAdapter.startDiscovery();
         } else {
@@ -119,7 +125,63 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Verarbeitet die Ergebnisse der Berechtigungsanfragen.
+    private void promptEnableBluetooth() {
+        new AlertDialog.Builder(this)
+                .setTitle("Bluetooth aktivieren")
+                .setMessage("Bluetooth ist deaktiviert. Möchten Sie es einschalten?")
+                .setPositiveButton("Ja", (dialog, which) -> {
+                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    startActivity(enableBtIntent);
+                })
+                .setNegativeButton("Nein", (dialog, which) -> dialog.dismiss())
+                .create()
+                .show();
+    }
+
+    private void promptEnableLocation() {
+        new AlertDialog.Builder(this)
+                .setTitle("Standort aktivieren")
+                .setMessage("Der Standort ist deaktiviert. Möchten Sie ihn einschalten?")
+                .setPositiveButton("Ja", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Nein", (dialog, which) -> dialog.dismiss())
+                .create()
+                .show();
+    }
+
+    private boolean isLocationEnabled() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            return getSystemService(android.location.LocationManager.class).isLocationEnabled();
+        } else {
+            return Settings.Secure.getInt(getContentResolver(), Settings.Secure.LOCATION_MODE, 0) != 0;
+        }
+    }
+
+    private void showScanDialog() {
+        // Liste initialisieren
+        deviceList = new ArrayList<>();
+        arrayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, deviceList);
+
+        // Dialog mit ListView erstellen
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.CustomDialogTheme);
+        builder.setTitle("Gefundene Geräte");
+        builder.setCancelable(false);
+        builder.setNegativeButton("Abbrechen", (dialog, which) -> {
+            bluetoothAdapter.cancelDiscovery(); // Scan abbrechen
+            unregisterReceiver(mReceiver); // Receiver abmelden
+            dialog.dismiss();
+        });
+
+        ListView listView = new ListView(this);
+        listView.setAdapter(arrayAdapter);
+        builder.setView(listView);
+
+        scanDialog = builder.create();
+        scanDialog.show();
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -136,12 +198,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Freigeben von Ressourcen beim Beenden der Aktivität.
     @Override
     protected void onDestroy() {
         super.onDestroy();
         try {
-            // Entfernt den BroadcastReceiver, um Ressourcenlecks zu vermeiden.
             unregisterReceiver(mReceiver);
         } catch (IllegalArgumentException e) {
             System.out.println("Receiver war nicht registriert");
