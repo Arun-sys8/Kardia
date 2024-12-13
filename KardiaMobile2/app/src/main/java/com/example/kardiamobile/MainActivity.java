@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
         lightButton = findViewById(R.id.Button7);
         mediumButton = findViewById(R.id.button9);
         strongButton = findViewById(R.id.button8);
-        lockStatusText = findViewById(R.id.lockStatusText);
+        lockStatusText = findViewById(R.id.cardLabel);
 
         // Setzt die Klick-Listener für die Buttons
         setupButtonListeners();
@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
             seekBar1.setEnabled(true); // Entsperrt die erste SeekBar
             seekBar2.setEnabled(true); // Entsperrt die zweite SeekBar
             isLocked = false; // Deaktiviert den Sperrstatus
-            lockStatusText.setText("SeekBars entsperrt.");
+            lockStatusText.setText("SeekBars entsperrt.\n");
         }
     }
 

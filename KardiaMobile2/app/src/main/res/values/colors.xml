@@ -5,5 +5,15 @@
     <color name ="dark_orange">#F3AC69</color>
     <color name ="light_orange">#FBE3CD</color>
     <color name ="sixty_opact_white">#8CFFFFFF</color>
-    <color name="b_blau">#68838b</color>
+    <color name="blau">#68838b</color>
+    <color name="rot">#FF4500</color>
+    <color name="pink">#EE3A8C</color>
+    <color name="gruen">#CAFF70</color>
+    <color name="grau">#DEDEDE</color>
+    <color name="plum1">#FFBBFF</color>
+    <color name="thistle1">#ffe1ff</color>
+    <color name="ametyst">#bfb1d4</color>
+
+
+
 </resources>
