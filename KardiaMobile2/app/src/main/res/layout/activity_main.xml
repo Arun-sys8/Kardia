@@ -149,4 +149,16 @@
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
+    <ekg_animation.ekg_view
+        android:id="@+id/ekgView"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        app:layout_constraintTop_toBottomOf="@id/imageView2"
+        app:layout_constraintBottom_toTopOf="@id/scanButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        tools:ignore="MissingClass" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
